@@ -5,6 +5,7 @@ services:
       - 5432:5432
     volumes:
       - pg_data:/var/lib/postgresql/data
+    platform: linux/amd64
     environment:
       POSTGRES_DB: postgres
       POSTGRES_USER: postgres
@@ -12,16 +13,20 @@ services:
   db-api:
     build: ../cmd/db/
     container_name: fastapi-db
+    platform: linux/amd64
     external_links:
       - postgres-db:postgres-db
     ports:
       - 8080:8080
     depends_on:
       - db
-  zookeeper:
-    image: 'bitnami/zookeeper:latest'
-  kafka:
-    image: 'bitnami/kafka:latest'
+#  zookeeper:
+#    platform: linux/amd64
+#    image: 'bitnami/zookeeper:latest'
+#  kafka:
+#    platform: linux/amd64
+#    image: 'bitnami/kafka:latest'
+
 
 volumes:
   pg_data:
