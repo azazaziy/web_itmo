@@ -1,0 +1,31 @@
+#networks:
+#  app-tier:
+#    driver: bridge
+
+services:
+  myapp:
+    image: fast_api_local
+    container_name: fastapi
+    external_links:
+      - db-pg:db-pg
+    ports:
+      - '80:80'
+#    networks:
+#      - app-tier
+#  zookeeper:
+#    image: 'bitnami/zookeeper:latest'
+#    networks:
+#      - app-tier
+#  kafka:
+#    image: 'bitnami/kafka:latest'
+#    networks:
+#      - app-tier
+  database:
+    image: postgres
+    container_name: db-pg
+    environment:
+      POSTGRES_DB: "ITMOweb"
+      POSTGRES_USER: "ITMO"
+      POSTGRES_PASSWORD: "web"
+    ports:
+      - "5432:5432"
