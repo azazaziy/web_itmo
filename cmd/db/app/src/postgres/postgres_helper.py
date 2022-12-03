@@ -38,7 +38,6 @@ class PostgresHelper:
                     port=self.port
                 )
 
-
     def _disconnect(self):
         self.connection.close()
         self.connection = None
@@ -67,8 +66,12 @@ class PostgresHelper:
         """
         self.cursor.execute(sql)
 
+
     @staticmethod
-    def _parse_select_query(values):
+    def __parse_array(input_array: list):
+        return "{values}".format(values=','.join(input_array))
+    @staticmethod
+    def __parse_select_query(values):
         if type(values) == str:
             return values
         if type(values) == list:
@@ -77,7 +80,15 @@ class PostgresHelper:
             return '*'
 
     @staticmethod
-    def _parse_conditions(conditions):
+    def __parse_values(values):
+        return f"({', '.join(values)})"
+
+    @staticmethod
+    def __parse_fields(fields):
+        return f"({', '.join(fields)})"
+
+    @staticmethod
+    def __parse_conditions(conditions):
         if type(conditions) != dict:
             return ''
         temp = []
@@ -86,21 +97,63 @@ class PostgresHelper:
             temp.append(condition)
         return f"WHERE {' AND '.join(temp)}"
 
-    def _select(self, kwargs):
-        values = self._parse_select_query(kwargs.get('values'))
-        conditions = self._parse_conditions(kwargs.get('conditions'))
-        sql = f"SELECT {values} FROM {kwargs.get('table')} {conditions}"
-        self.cursor.execute(sql)
+    @staticmethod
+    def __parse_target(target):
+        return f"{target.get('field')} = {target.get('value')}"
 
-    def _alter(self, kwargs):
-        sql = "ALTER TABLE IF EXISTS {table} "
-        pass
+    def __generate_select_sql(self, kwargs):
+        values = self.__parse_select_query(kwargs.get('values'))
+        conditions = self.__parse_conditions(kwargs.get('conditions'))
+        return f"SELECT {values} FROM {kwargs.get('table')} {conditions}"
 
-    def _update(self, kwargs):
-        pass
+    def __generate_insert_sql(self, kwargs):
+        fields = self.__parse_fields(kwargs.get('fields'))
+        values = self.__parse_values(kwargs.get('values'))
+        return f"INSERT INTO {kwargs.get('table')} {fields} VALUES {values}"
+
+    def __generate_update_sql(self, kwargs):
+        if self._select_one(kwargs):
+            conditions = self.__parse_conditions(kwargs.get('conditions'))
+            target = self.__parse_target(kwargs.get('target'))
+            return f"UPDATE {kwargs.get('table')} SET {target} {conditions}"
+
+    def __generate_delete_sql(self, kwargs):
+        if self._select_one(kwargs):
+            conditions = self.__parse_conditions(kwargs.get('conditions'))
+            return f"DELETE FROM {kwargs.get('table')} {conditions}"
+        return None
+
+    def _select_one(self, kwargs):
+        with self.connection:
+            self.cursor.execute(self.__generate_select_sql(kwargs))
+            return self.cursor.fetchone()
+
+    def _select_all(self, kwargs):
+        with self.connection:
+            self.cursor.execute(self.__generate_select_sql(kwargs))
+            return self.cursor.fetchall()
+
+    def _insert(self, kwargs):
+        with self.connection:
+            sql = self.__generate_insert_sql(kwargs)
+            print(sql)
+            self.cursor.execute(sql)
+            return self.connection.commit()
 
     def _delete(self, kwargs):
-        pass
+        sql = self.__generate_delete_sql(kwargs)
+        if sql:
+            with self.connection:
+                self.cursor.execute(sql)
+                return self.connection.commit()
+
+    def _update(self, kwargs):
+        sql = self.__generate_update_sql(kwargs)
+        if sql:
+            with self.connection:
+                self.cursor.execute(sql)
+                return self.connection.commit()
+
 
     def _check_state(self):
         if not self.cursor:
@@ -110,12 +163,14 @@ class PostgresHelper:
 
     def execute(self, **kwargs):
         self._check_state()
-        with self.connection:
-            if kwargs.get('action_type') == 'select':
-                return self._select(kwargs)
-            if kwargs.get('action_type') == 'alter':
-                return self._alter(kwargs)
-            if kwargs.get('action_type') == 'update':
-                return self._update(kwargs)
-            if kwargs.get('action_type') == 'delete':
-                return self._delete(kwargs)
+        if kwargs.get('action_type') == 'select_one':
+            return self._select_one(kwargs)
+        if kwargs.get('action_type') == 'select_all':
+            return self._select_all(kwargs)
+        if kwargs.get('action_type') == 'alter':
+            return self._insert(kwargs)
+        if kwargs.get('action_type') == 'update':
+            return self._update(kwargs)
+        if kwargs.get('action_type') == 'delete':
+            return self._delete(kwargs)
+
