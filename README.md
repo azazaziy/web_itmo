@@ -4,6 +4,10 @@
 ```bash
 docker build -t fast_api_local ./cmd/db/
 ```
+Сборка контейнера для FastAPI под m1
+```bash
+docker buildx build -t fast_api_local ./cmd/db/
+```
 Запуск консоли FastAPI
 ```bash
 docker-compose -f ./build/docker-compose.yaml run db-api bash
@@ -22,6 +26,10 @@ docker-compose -f ./build/docker-compose.yaml up --build
 docker-compose -f ./build/docker-compose.m1_macs.yaml up --build
 ```
 
+Запуск приложения для маков на m1
+```bash
+docker-compose -f ./build/docker-compose.m1_macs.yaml up
+```
 
 Запуск приложения
 ```bash
